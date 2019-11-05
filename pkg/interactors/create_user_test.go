@@ -1,6 +1,10 @@
 package interactors
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/CESARBR/knot-babeltower/pkg/entities"
+)
 
 type FakeCreateUserLogger struct {
 }
@@ -20,8 +24,12 @@ func (fl *FakeCreateUserLogger) Errorf(string, ...interface{}) {}
 func TestCreateUser(t *testing.T) {
 	fakeLogger := &FakeCreateUserLogger{}
 	createUserInteractor := NewCreateUser(fakeLogger)
+	user := entities.User{Email: "fake@email.com", Password: "123"}
 
-	createUserInteractor.Execute() // should return no error
+	err := createUserInteractor.Execute(user) // should return no error
+	if err != nil {
+		t.Error("Create user fail")
+	}
 
 	t.Logf("Create user ok")
 }
