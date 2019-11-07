@@ -9,6 +9,16 @@ import (
 type FakeCreateUserLogger struct {
 }
 
+type FakeUserProxy struct {
+}
+
+type FakeUserProxyWithSideEffect struct {
+}
+
+type ErrorMock struct {
+	msg string
+}
+
 func (fl *FakeCreateUserLogger) Info(...interface{}) {}
 
 func (fl *FakeCreateUserLogger) Infof(string, ...interface{}) {}
@@ -21,14 +31,43 @@ func (fl *FakeCreateUserLogger) Error(...interface{}) {}
 
 func (fl *FakeCreateUserLogger) Errorf(string, ...interface{}) {}
 
-func TestCreateUser(t *testing.T) {
+func (fup *FakeUserProxy) SendCreateUser(user entities.User) (err error) {
+	return nil
+}
+
+func (em *ErrorMock) Error() string {
+	return em.msg
+}
+
+func (fup *FakeUserProxyWithSideEffect) SendCreateUser(user entities.User) error {
+	return &ErrorMock{msg: "Error mocked"}
+}
+
+func shouldReturnNoError() error {
 	fakeLogger := &FakeCreateUserLogger{}
-	createUserInteractor := NewCreateUser(fakeLogger)
+	fakeUserProxy := &FakeUserProxy{}
+	createUserInteractor := NewCreateUser(fakeLogger, fakeUserProxy)
+	return createUserInteractor.Execute(entities.User{Email: "fake@email.com", Password: "123"})
+}
+
+func shouldRaiseError() error {
+	fakeLogger := &FakeCreateUserLogger{}
+	fakeUserProxy := &FakeUserProxyWithSideEffect{}
+	createUserInteractor := NewCreateUser(fakeLogger, fakeUserProxy)
 	user := entities.User{Email: "fake@email.com", Password: "123"}
 
-	err := createUserInteractor.Execute(user) // should return no error
+	return createUserInteractor.Execute(user)
+}
+
+func TestCreateUser(t *testing.T) {
+	err := shouldReturnNoError()
 	if err != nil {
-		t.Error("Create user fail")
+		t.Errorf("Create User failed. Error: %s", err)
+	}
+
+	err = shouldRaiseError()
+	if err == nil {
+		t.Errorf("Create User should raise error. Error: %s", err)
 	}
 
 	t.Logf("Create user ok")
