@@ -47,8 +47,8 @@ func (p *Proxy) SendCreateUser(user entities.User) (err error) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode >= 400 {
-		err = fmt.Errorf(resp.Status)
+	if resp.StatusCode == http.StatusConflict {
+		err = entities.ConflictResponse{}
 	}
 
 done:

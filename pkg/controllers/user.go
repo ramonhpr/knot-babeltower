@@ -40,6 +40,15 @@ func (uc *UserController) writeResponse(w http.ResponseWriter, status int, err s
 	}
 }
 
+func verifyErrorType(err error) int {
+	switch err.(type) {
+	case entities.ConflictResponse:
+		return http.StatusConflict
+	default:
+		return http.StatusInternalServerError
+	}
+}
+
 // Create handles the server request and calls CreateUserInteractor
 func (uc *UserController) Create(w http.ResponseWriter, r *http.Request) {
 	var err error
@@ -63,7 +72,7 @@ func (uc *UserController) Create(w http.ResponseWriter, r *http.Request) {
 	err = uc.createUserInteractor.Execute(user)
 	if err != nil {
 		uc.logger.Errorf("Response error: %s", err)
-		status = http.StatusInternalServerError
+		status = verifyErrorType(err)
 		errStr = err.Error()
 	} else {
 		uc.logger.Infof("User %s created", user.Email)
