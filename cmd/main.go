@@ -20,6 +20,7 @@ func main() {
 	userProxy := network.NewUserProxy(logrus.Get("UserProxy"), config.Users.Hostname, config.Users.Port)
 	createUser := interactors.NewCreateUser(logrus.Get("CreateUser"), userProxy)
 	userController := controllers.NewUserController(logrus.Get("Controller"), createUser)
-	server := server.NewServer(config.Server.Port, logrus.Get("Server"), userController)
+	thingController := controllers.NewThingController(logrus.Get("ThingController"))
+	server := server.NewServer(config.Server.Port, logrus.Get("Server"), userController, thingController)
 	server.Start()
 }

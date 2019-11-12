@@ -18,14 +18,15 @@ type Health struct {
 
 // Server represents the HTTP server
 type Server struct {
-	port           int
-	logger         logging.Logger
-	userController *controllers.UserController
+	port            int
+	logger          logging.Logger
+	userController  *controllers.UserController
+	thingController *controllers.ThingController
 }
 
 // NewServer creates a new server instance
-func NewServer(port int, logger logging.Logger, userController *controllers.UserController) Server {
-	return Server{port, logger, userController}
+func NewServer(port int, logger logging.Logger, userController *controllers.UserController, thingController *controllers.ThingController) Server {
+	return Server{port, logger, userController, thingController}
 }
 
 // Start starts the http server
@@ -42,6 +43,7 @@ func (s *Server) createRouters() *mux.Router {
 	r := mux.NewRouter()
 	r.HandleFunc("/healthcheck", s.healthcheckHandler)
 	r.HandleFunc("/users", s.userController.Create).Methods("POST")
+	r.HandleFunc("/things", s.thingController.Create).Methods("POST")
 	return r
 }
 
