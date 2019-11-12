@@ -1,6 +1,10 @@
 package interactors
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/CESARBR/knot-babeltower/pkg/entities"
+)
 
 type FakeCreateThingLogger struct {
 }
@@ -33,7 +37,7 @@ func TestCreateThing(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			createThingInteractor := NewCreateThing(tc.fakeLogger)
-			err := createThingInteractor.Execute()
+			err := createThingInteractor.Execute(entities.Thing{Id: "fakeId", Name: "FakeName", Schema: map[string]interface{}{}})
 			if err != tc.expected {
 				t.Errorf("Create Thing failed. Error: %s", err)
 				return

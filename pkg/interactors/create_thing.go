@@ -1,6 +1,7 @@
 package interactors
 
 import (
+	"github.com/CESARBR/knot-babeltower/pkg/entities"
 	"github.com/CESARBR/knot-babeltower/pkg/logging"
 )
 
@@ -15,7 +16,7 @@ func NewCreateThing(logger logging.Logger) *CreateThing {
 }
 
 // Execute runs the use case
-func (ct *CreateThing) Execute() error {
+func (ct *CreateThing) Execute(thing entities.Thing) error {
 	ct.logger.Debug("Executing Create thing interactor")
 	return nil
 }
