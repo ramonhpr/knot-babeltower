@@ -5,28 +5,37 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/CESARBR/knot-babeltower/pkg/controllers"
 	"github.com/CESARBR/knot-babeltower/pkg/logging"
 
 	"github.com/gorilla/mux"
 )
+
+// Controller defines which functions the controller should have
+type Controller interface {
+	Create(w http.ResponseWriter, r *http.Request)
+}
 
 // Health represents the service's health status
 type Health struct {
 	Status string `json:"status"`
 }
 
+type handler func(http.ResponseWriter, *http.Request)
+
 // Server represents the HTTP server
 type Server struct {
-	port            int
-	logger          logging.Logger
-	userController  *controllers.UserController
-	thingController *controllers.ThingController
+	port      int
+	logger    logging.Logger
+	ctlMapper map[string]map[string]handler
 }
 
 // NewServer creates a new server instance
-func NewServer(port int, logger logging.Logger, userController *controllers.UserController, thingController *controllers.ThingController) Server {
-	return Server{port, logger, userController, thingController}
+func NewServer(port int, logger logging.Logger, userController, thingController Controller) Server {
+	return Server{port, logger, map[string]map[string]handler{
+		"/users": map[string]handler{
+			"POST": userController.Create},
+		"/things": map[string]handler{
+			"POST": thingController.Create}}}
 }
 
 // Start starts the http server
@@ -42,8 +51,12 @@ func (s *Server) Start() {
 func (s *Server) createRouters() *mux.Router {
 	r := mux.NewRouter()
 	r.HandleFunc("/healthcheck", s.healthcheckHandler)
-	r.HandleFunc("/users", s.userController.Create).Methods("POST")
-	r.HandleFunc("/things", s.thingController.Create).Methods("POST")
+	for route, methodMapper := range s.ctlMapper {
+		for method, handlerCtl := range methodMapper {
+			r.HandleFunc(route, handlerCtl).Methods(method)
+		}
+	}
+
 	return r
 }
 
