@@ -74,6 +74,8 @@ func main() {
 		case started := <-msgChan:
 			if started {
 				logger.Info("Msg handler started")
+			} else {
+				quit <- true
 			}
 		case <-quit:
 			msgHandler.Stop()

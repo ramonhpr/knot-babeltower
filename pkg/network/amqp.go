@@ -13,6 +13,7 @@ type Amqp struct {
 	logger  logging.Logger
 	conn    *amqp.Connection
 	channel *amqp.Channel
+	queue   *amqp.Queue
 }
 
 func (a *Amqp) notifyWhenClosed(started chan bool) {
@@ -55,7 +56,7 @@ func (a *Amqp) connect() error {
 
 // NewAmqp constructs the AMQP connection handler
 func NewAmqp(url string, logger logging.Logger) *Amqp {
-	return &Amqp{url, logger, nil, nil}
+	return &Amqp{url, logger, nil, nil, nil}
 }
 
 // Start starts the handler
@@ -69,6 +70,77 @@ func (a *Amqp) Start(started chan bool) {
 
 	go a.notifyWhenClosed(started)
 	started <- true
+}
+
+// DeclareQueue declare a queue in amqp handler
+func (a *Amqp) DeclareQueue(queueName, exchangeName string) error {
+	err := a.channel.ExchangeDeclare(
+		exchangeName,
+		amqp.ExchangeTopic, // type
+		true,               // durable
+		false,              // delete when complete
+		false,              // internal
+		false,              // noWait
+		nil,                // arguments
+	)
+	if err != nil {
+		a.logger.Error(err)
+		return err
+	}
+
+	queue, err := a.channel.QueueDeclare(
+		queueName,
+		true,  // durable
+		false, // delete when unused
+		false, // exclusive
+		false, // noWait
+		nil,   // arguments
+	)
+	if err != nil {
+		a.logger.Error(err)
+		return err
+	}
+
+	a.queue = &queue
+	return nil
+}
+
+// OnMessage receive messages an put them on channel
+func (a *Amqp) OnMessage(msgChan chan InMsg, queueName, exchange, key string) error {
+
+	err := a.channel.QueueBind(
+		queueName,
+		key,
+		exchange,
+		false,
+		nil,
+	)
+	if err != nil {
+		a.logger.Error(err)
+		return err
+	}
+
+	deliveries, err := a.channel.Consume(
+		queueName,
+		"",    // consumerTag
+		true,  // noAck
+		false, // exclusive
+		false, // noLocal
+		false, // noWait
+		nil,   // arguments
+	)
+	if err != nil {
+		a.logger.Error(err)
+		return err
+	}
+
+	go func(deliveries <-chan amqp.Delivery) {
+		for d := range deliveries {
+			msgChan <- InMsg{d.Exchange, d.RoutingKey, d.Body}
+		}
+	}(deliveries)
+
+	return nil
 }
 
 // Stop closes the connection started
