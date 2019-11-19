@@ -136,7 +136,7 @@ func (a *Amqp) OnMessage(msgChan chan InMsg, queueName, exchange, key string) er
 
 	go func(deliveries <-chan amqp.Delivery) {
 		for d := range deliveries {
-			msgChan <- InMsg{d.Exchange, d.RoutingKey, d.Body}
+			msgChan <- InMsg{d.Exchange, d.RoutingKey, d.Headers, d.Body}
 		}
 	}(deliveries)
 
