@@ -30,6 +30,8 @@ func (mc *MsgHandler) onMsgReceived(msgChan chan InMsg) {
 		mc.logger.Infof("Exchange: %s, routing key: %s", msg.Exchange, msg.RoutingKey)
 		mc.logger.Infof("Message received: %s", string(msg.Body))
 
+		authorizationHeader := msg.Headers["Authorization"]
+
 		switch msg.RoutingKey {
 		case "device.register":
 			msgParsed := RegisterRequestMsg{}
@@ -39,7 +41,7 @@ func (mc *MsgHandler) onMsgReceived(msgChan chan InMsg) {
 				continue
 			}
 
-			err = mc.registerThing.Execute(msgParsed.ID, msgParsed.Name)
+			err = mc.registerThing.Execute(msgParsed.ID, msgParsed.Name, authorizationHeader)
 			if err != nil {
 				mc.logger.Error(err)
 				continue
