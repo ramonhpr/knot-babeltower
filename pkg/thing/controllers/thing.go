@@ -9,6 +9,18 @@ import (
 	"github.com/CESARBR/knot-babeltower/pkg/thing/interactors"
 )
 
+// IController handles thing controller interface
+type IController interface {
+	Register(body []byte, authorizationHeader string) error
+	Unregister(body []byte, authorizationHeader string) error
+	UpdateSchema(body []byte, authorizationHeader string) error
+	AuthDevice(body []byte, authorization string) error
+	ListDevices(authorization string) error
+	PublishData(body []byte, authorization string) error
+	RequestData(body []byte, authorization string) error
+	UpdateData(body []byte, authorization string) error
+}
+
 // ThingController handle messages received from a service
 type ThingController struct {
 	logger          logging.Logger

@@ -23,29 +23,33 @@ const (
 // MsgHandler handle messages received from a service
 type MsgHandler struct {
 	logger          logging.Logger
-	amqp            *network.Amqp
-	thingController *controllers.ThingController
+	amqp            network.IQueueService
+	thingController controllers.IController
 }
 
 // NewMsgHandler creates a new MsgHandler instance with the necessary dependencies
-func NewMsgHandler(logger logging.Logger, amqp *network.Amqp, thingController *controllers.ThingController) *MsgHandler {
+func NewMsgHandler(logger logging.Logger, amqp network.IQueueService, thingController *controllers.ThingController) *MsgHandler {
 	return &MsgHandler{logger, amqp, thingController}
 }
 
 // Start starts to listen messages
-func (mc *MsgHandler) Start(started chan bool) {
+func (mc *MsgHandler) Start(started chan bool) error {
 	mc.logger.Debug("message handler started")
+	if started == nil {
+		return errors.New("missing channel")
+	}
 	msgChan := make(chan network.InMsg)
 	err := mc.subscribeToMessages(msgChan)
 	if err != nil {
 		mc.logger.Error(err)
 		started <- false
-		return
+		return err
 	}
 
 	go mc.onMsgReceived(msgChan)
 
 	started <- true
+	return nil
 }
 
 // Stop stops to listen for messages
@@ -59,7 +63,7 @@ func (mc *MsgHandler) subscribeToMessages(msgChan chan network.InMsg) error {
 		if err != nil {
 			return
 		}
-		err = mc.amqp.OnMessage(msgChan, queueName, exchange, key)
+		err = mc.amqp.GetSubscriber().OnMessage(msgChan, queueName, exchange, key)
 	}
 
 	// Subscribe to messages received from any client

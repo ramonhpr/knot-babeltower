@@ -34,7 +34,7 @@ type ClientPublisher interface {
 // msgClientPublisher handle messages received from a service
 type msgClientPublisher struct {
 	logger logging.Logger
-	amqp   *network.Amqp
+	amqp   network.IPublisher
 }
 
 // NewMsgClientPublisher constructs the msgClientPublisher

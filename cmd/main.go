@@ -82,7 +82,12 @@ func main() {
 		case started := <-amqpStartedChan:
 			if started {
 				logger.Info("AMQP connection started")
-				go msgHandler.Start(msgStartedChan)
+				go func() {
+					err := msgHandler.Start(msgStartedChan)
+					if err != nil {
+						quit <- true
+					}
+				}()
 			}
 		case started := <-msgStartedChan:
 			if started {
