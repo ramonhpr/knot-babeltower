@@ -34,11 +34,17 @@ func NewMsgHandler(logger logging.Logger, amqp network.IQueueService, thingContr
 
 // Start starts to listen messages
 func (mc *MsgHandler) Start(started chan bool) error {
+	return mc.start(started, make(chan network.InMsg))
+}
+
+func (mc *MsgHandler) start(started chan bool, msgChan chan network.InMsg) error {
 	mc.logger.Debug("message handler started")
 	if started == nil {
 		return errors.New("missing channel")
 	}
-	msgChan := make(chan network.InMsg)
+	if msgChan == nil {
+		return errors.New("missing msgChan")
+	}
 	err := mc.subscribeToMessages(msgChan)
 	if err != nil {
 		mc.logger.Error(err)
@@ -46,7 +52,14 @@ func (mc *MsgHandler) Start(started chan bool) error {
 		return err
 	}
 
-	go mc.onMsgReceived(msgChan)
+	go func() {
+		for {
+			err := mc.onMsgReceived(msgChan)
+			if err != nil {
+				mc.logger.Error(err)
+			}
+		}
+	}()
 
 	started <- true
 	return nil
@@ -79,30 +92,30 @@ func (mc *MsgHandler) subscribeToMessages(msgChan chan network.InMsg) error {
 	return err
 }
 
-func (mc *MsgHandler) onMsgReceived(msgChan chan network.InMsg) {
-	for {
-		var err error
-		msg := <-msgChan
-		mc.logger.Infof("exchange: %s, routing key: %s", msg.Exchange, msg.RoutingKey)
-		mc.logger.Infof("message received: %s", string(msg.Body))
+func (mc *MsgHandler) onMsgReceived(msgChan chan network.InMsg) error {
+	msg := <-msgChan
+	var err error
+	mc.logger.Infof("exchange: %s, routing key: %s", msg.Exchange, msg.RoutingKey)
+	mc.logger.Infof("message received: %s", string(msg.Body))
 
-		token, ok := msg.Headers["Authorization"].(string)
-		if !ok {
-			mc.logger.Error(errors.New("authorization token not provided"))
-			continue
-		}
-
-		if msg.Exchange == exchangeFogIn {
-			err = mc.handleClientMessages(msg, token)
-		} else if msg.Exchange == exchangeConnOut {
-			err = mc.handleConnectorMessages(msg, token)
-		}
-
-		if err != nil {
-			mc.logger.Error(err)
-			continue
-		}
+	token, ok := msg.Headers["Authorization"].(string)
+	if !ok {
+		return errors.New("authorization token not provided")
 	}
+
+	if msg.Exchange == exchangeFogIn {
+		err = mc.handleClientMessages(msg, token)
+	} else if msg.Exchange == exchangeConnOut {
+		err = mc.handleConnectorMessages(msg, token)
+	} else {
+		err = errors.New("unexpected exchange received")
+	}
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (mc *MsgHandler) handleClientMessages(msg network.InMsg, token string) error {
@@ -120,9 +133,9 @@ func (mc *MsgHandler) handleClientMessages(msg network.InMsg, token string) erro
 		return mc.thingController.ListDevices(token)
 	case "data.publish":
 		return mc.thingController.PublishData(msg.Body, token)
+	default:
+		return errors.New("unexpected routing key")
 	}
-
-	return nil
 }
 
 func (mc *MsgHandler) handleConnectorMessages(msg network.InMsg, token string) error {
@@ -134,6 +147,9 @@ func (mc *MsgHandler) handleConnectorMessages(msg network.InMsg, token string) e
 		return mc.thingController.UpdateData(msg.Body, token)
 	case "device.registered":
 		// Ignore message
+		break
+	default:
+		return errors.New("unexpected routing key")
 	}
 
 	return nil
