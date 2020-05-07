@@ -10,7 +10,7 @@ app-*
 *.test
 
 # Output of coverage test
-coverage.html
+# coverage.html
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
