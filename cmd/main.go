@@ -44,8 +44,8 @@ func main() {
 	amqp := network.NewAmqp(config.RabbitMQ.URL, logrus.Get("Amqp"))
 
 	// AMQP Publishers
-	clientPublisher := thingDeliveryAMQP.NewMsgClientPublisher(logrus.Get("ClientPublisher"), amqp)
-	commandSender := thingDeliveryAMQP.NewCommandSender(logrus.Get("Command Sender"), amqp)
+	clientPublisher := thingDeliveryAMQP.NewMsgClientPublisher(logrus.Get("ClientPublisher"), amqp.GetSender())
+	commandSender := thingDeliveryAMQP.NewCommandSender(logrus.Get("Command Sender"), amqp.GetSender())
 
 	// Services
 	userProxy := userDeliveryHTTP.NewUserProxy(logrus.Get("UserProxy"), config.Users.Hostname, config.Users.Port)
@@ -66,7 +66,7 @@ func main() {
 
 	// AMQP Handler
 	msgStartedChan := make(chan bool, 1)
-	msgHandler := server.NewMsgHandler(logrus.Get("MsgHandler"), amqp, thingController)
+	msgHandler := server.NewMsgHandler(logrus.Get("MsgHandler"), amqp.GetReceiver(), thingController)
 
 	// Start goroutines
 	go amqp.Start(amqpStartedChan)
