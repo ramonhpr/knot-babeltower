@@ -3,9 +3,9 @@ FROM golang:1.14-alpine
 WORKDIR /usr/src/app
 COPY . .
 
-RUN apk add --update make
+RUN apk add --update make gcc linux-headers build-base
 RUN go get github.com/cespare/reflex
 RUN go get ./...
 
 ENV "ENV" "development"
-CMD [ "make", "watch"]
+CMD [ "make", "endpoint-test"]

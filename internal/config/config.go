@@ -45,6 +45,17 @@ type Config struct {
 	Things
 }
 
+// GetDefaultConfig local configuration default
+func GetDefaultConfig() Config {
+	return Config{
+		Server:   Server{8080},
+		Logger:   Logger{"info"},
+		Users:    Users{"users", 8180},
+		RabbitMQ: RabbitMQ{"amqp://rabbitmq"},
+		Things:   Things{"things", 8180},
+	}
+}
+
 func readFile(name string) {
 	logger := logging.NewLogrus("error").Get("Config")
 	viper.SetConfigName(name)

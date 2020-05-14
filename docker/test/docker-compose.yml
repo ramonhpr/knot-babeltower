@@ -1,0 +1,96 @@
+version: '3'
+
+networks:
+  mainflux-net:
+    driver: bridge
+
+services:
+  things-db:
+    image: postgres:9.6.18-alpine
+    container_name: things-db
+    restart: on-failure
+    networks:
+      - mainflux-net
+    environment:
+      POSTGRES_PASSWORD: mainflux
+      POSTGRES_USER: mainflux
+      POSTGRES_DB: things
+
+  users-db:
+    image: postgres:9.6.18-alpine
+    container_name: users-db
+    restart: on-failure
+    networks:
+      - mainflux-net
+    environment:
+      POSTGRES_PASSWORD: mainflux
+      POSTGRES_USER: mainflux
+      POSTGRES_DB: users
+
+  things:
+    image: mainflux/things:0.9.0
+    container_name: things
+    restart: on-failure
+    networks:
+      - mainflux-net
+    depends_on:
+      - things-db
+      - users
+    ports:
+      - "8182:8180"
+    environment:
+      MF_THINGS_DB_HOST: things-db
+      MF_THINGS_LOG_LEVEL: debug
+      MF_USERS_URL: "users:8181"
+
+  users:
+    image: mainflux/users:0.9.0
+    container_name: users
+    restart: on-failure
+    depends_on:
+      - users-db
+    networks:
+      - mainflux-net
+    ports:
+      - "8180:8180"
+    expose:
+      - 8181
+    environment:
+      MF_USERS_DB_HOST: users-db
+      MF_USERS_LOG_LEVEL: debug
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    restart: on-failure
+    networks:
+      - mainflux-net
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+
+  sut:
+    # image: golang:1.14
+    build:
+      context: ../..
+      dockerfile: docker/Dockerfile-dev
+    container_name: sut
+    networks:
+      - mainflux-net
+    depends_on:
+      - rabbitmq
+      - things
+      - users
+  #   volumes:
+  #     - ../../:/go/src/github.com/CESARBR/knot-babeltower
+  #   commands: 
+  #     - go get -v "github.com/alecthomas/template" 
+  #     - go get -v "github.com/go-playground/validator" 
+  #     - go get -v "github.com/google/go-querystring/query" 
+  #     - go get -v "github.com/gorilla/mux" 
+  #     - go get -v "github.com/sirupsen/logrus" 
+  #     - go get -v "github.com/spf13/viper" 
+  #     - go get -v "github.com/streadway/amqp" 
+  #     - go get -v "github.com/swaggo/http-swagger" 
+  #     - go get -v "github.com/swaggo/swag"
+  #     - go test -short github.com/CESARBR/knot-babeltower/cmd
