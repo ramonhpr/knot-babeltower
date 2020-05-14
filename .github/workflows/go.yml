@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: Build and Tests
+    name: Build
     runs-on: ubuntu-latest
     steps:
     - name: Set up Go 1.x
@@ -31,5 +31,26 @@ jobs:
     - name: Build
       run: make bin
 
-    - name: Test
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+
+    - name: Run unit tests
       run: make test
+    
+    - name: Update docker lib permissions
+      run: sudo chmod 755 /var/lib/docker
+
+    - name: Cache docker images
+      id: cache-docker-imgs
+      uses: actions/cache@v1
+      with:
+        path: /var/lib/docker
+        key: ${{ runner.os }}-docker-${{ hashFiles('**/go.sum') }}
+
+    - name: End to end test
+      run: |
+        docker-compose -f docker/test/docker-compose.yml up sut

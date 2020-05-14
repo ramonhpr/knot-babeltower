@@ -59,6 +59,7 @@ func (p *Proxy) Create(user entities.User) (err error) {
 // CreateToken creates a valid token for the specified user
 func (p *Proxy) CreateToken(user entities.User) (string, error) {
 	var resp *http.Response
+	p.logger.Debug("proxying request to create token")
 
 	credentials, err := json.Marshal(user)
 	if err != nil {
@@ -81,7 +82,7 @@ func (p *Proxy) CreateToken(user entities.User) (string, error) {
 	decoder := json.NewDecoder(resp.Body)
 	err = decoder.Decode(tr)
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 
 	return tr.Token, nil

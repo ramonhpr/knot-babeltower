@@ -1,7 +1,7 @@
 GOCMD=go
 GOBUILD=$(GOCMD) build
 GOCLEAN=$(GOCMD) clean
-GOTEST=$(GOCMD) test -v ./...
+GOTEST=$(GOCMD) test -v
 GOGET=$(GOCMD) get -u -v
 
 OS := $(shell uname -s | awk '{print tolower($$0)}')
@@ -42,7 +42,11 @@ http-docs:
 
 .PHONY: test
 test:
-	set -o pipefail && $(GOTEST) | sed ''/PASS/s//$$(printf "\033[32mPASS\033[0m")/'' | sed ''/FAIL/s//$$(printf "\033[31mFAIL\033[0m")/'' | grep -v RUN
+	set -o pipefail && $(GOTEST) -short ./... | sed ''/PASS/s//$$(printf "\033[32mPASS\033[0m")/'' | sed ''/FAIL/s//$$(printf "\033[31mFAIL\033[0m")/'' | grep -v RUN
+
+.PHONY: endpoint-test
+endpoint-test:
+	set -o pipefail && $(GOTEST) ./cmd | sed ''/PASS/s//$$(printf "\033[32mPASS\033[0m")/'' | sed ''/FAIL/s//$$(printf "\033[31mFAIL\033[0m")/'' | grep -v RUN
 
 .PHONY: lint
 lint:
@@ -50,7 +54,7 @@ lint:
 
 .PHONY: cover
 cover:
-	${GOCMD} test -coverprofile=coverage.out ./... && ${GOCMD} tool cover -html=coverage.out -o coverage.html
+	${GOCMD} test -short -coverprofile=coverage.out ./... && ${GOCMD} tool cover -html=coverage.out -o coverage.html
 
 .SILENT: clean
 .PHONY: clean

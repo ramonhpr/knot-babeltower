@@ -14,10 +14,12 @@ func (i *ThingInteractor) Register(authorization, id, name string) error {
 		return sendErr
 	}
 	if id == "" {
-		return ErrIDNotProvided
+		sendErr := i.sendResponse(id, name, "", ErrIDNotProvided)
+		return sendErr
 	}
 	if name == "" {
-		return ErrNameNotProvided
+		sendErr := i.sendResponse(id, name, "", ErrNameNotProvided)
+		return sendErr
 	}
 
 	err := i.verifyThingID(id)
