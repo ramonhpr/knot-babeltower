@@ -25,8 +25,8 @@ func monitorSignals(sigs chan os.Signal, quit chan bool, logger logging.Logger) 
 	quit <- true
 }
 
-func main() {
-	config := config.Load()
+// Main will be used for unit tests
+func Main(config config.Config, quit chan bool, startedChan chan bool) {
 	logrus := logging.NewLogrus(config.Logger.Level)
 
 	logger := logrus.Get("Main")
@@ -34,7 +34,6 @@ func main() {
 
 	// Signal Handler
 	sigs := make(chan os.Signal, 1)
-	quit := make(chan bool, 1)
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
 	go monitorSignals(sigs, quit, logger)
@@ -87,6 +86,7 @@ func main() {
 		case started := <-msgStartedChan:
 			if started {
 				logger.Info("message handler started")
+				startedChan <- true
 			} else {
 				quit <- true
 			}
@@ -97,4 +97,8 @@ func main() {
 			os.Exit(0)
 		}
 	}
+}
+
+func main() {
+	Main(config.Load(), make(chan bool, 1), make(chan bool, 1))
 }

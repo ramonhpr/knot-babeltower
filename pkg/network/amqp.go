@@ -173,6 +173,12 @@ func (a *Amqp) connect() error {
 		return err
 	}
 
+	err = channel.ExchangeDeclare("data.published", "fanout", true, false, false, true, nil)
+	if err != nil {
+		a.logger.Error(err)
+		return err
+	}
+
 	a.logger.Debug("AMQP handler connected")
 	a.channel = channel
 
