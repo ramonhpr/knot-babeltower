@@ -30,13 +30,10 @@ const (
 )
 
 var (
-	errMissingChannel           = errors.New("missing channel")
-	errMissingMsgChannel        = errors.New("missing message channel")
-	errAuthorizationToken       = errors.New("authorization token not provided")
-	errUnsupportedMsg           = errors.New("unsupported message")
-	errUnexpectedRoutingKey     = errors.New("unexpected routing key")
-	errCorrelationIDNotProvided = errors.New("correlation ID not provided")
-	errReplyToNotProvided       = errors.New("reply_to property not provided")
+	errMissingChannel       = errors.New("missing channel")
+	errMissingMsgChannel    = errors.New("missing message channel")
+	errUnsupportedMsg       = errors.New("unsupported message")
+	errUnexpectedRoutingKey = errors.New("unexpected routing key")
 )
 
 // MsgHandler handle messages received from a service
@@ -125,10 +122,7 @@ func (mc *MsgHandler) onMsgReceived(msgChan chan network.InMsg) (err error) {
 	mc.logger.Infof("exchange: %s, routing key: %s", msg.Exchange, msg.RoutingKey)
 	mc.logger.Infof("message received: %s", string(msg.Body))
 
-	token, ok := msg.Headers["Authorization"].(string)
-	if !ok {
-		return errAuthorizationToken
-	}
+	token, _ := msg.Headers["Authorization"].(string)
 
 	if msg.Exchange != exchangeDataSent && msg.Exchange != exchangeDevices {
 		return errUnsupportedMsg
@@ -145,11 +139,7 @@ func (mc *MsgHandler) onMsgReceived(msgChan chan network.InMsg) (err error) {
 		err = mc.handleClientMessages(msg, token)
 	}
 
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func (mc *MsgHandler) handleClientMessages(msg network.InMsg, token string) error {
@@ -171,15 +161,8 @@ func (mc *MsgHandler) handleClientMessages(msg network.InMsg, token string) erro
 }
 
 func (mc *MsgHandler) handleRequestReplyCommands(msg network.InMsg, token string) error {
-	replyTo, ok := msg.Headers["reply_to"].(string)
-	if !ok {
-		return errReplyToNotProvided
-	}
-
-	corrID, ok := msg.Headers["correlation_id"].(string)
-	if !ok {
-		return errCorrelationIDNotProvided
-	}
+	replyTo, _ := msg.Headers["reply_to"].(string)
+	corrID, _ := msg.Headers["correlation_id"].(string)
 
 	switch msg.RoutingKey {
 	case bindingKeyAuthDevice:

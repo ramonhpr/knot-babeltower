@@ -38,4 +38,8 @@ var (
 
 	// ErrDataInvalid is returned when the provided data mismatch the thing's schema
 	ErrDataInvalid = errors.New("data is incompatible with thing's schema")
+	// ErrCorrelationIDNotProvided is returned when the correlation id is not provided in RPC calls
+	ErrCorrelationIDNotProvided = errors.New("correlation ID not provided")
+	// ErrReplyToNotProvided is returned when the reply_to is not provided in RPC calls
+	ErrReplyToNotProvided = errors.New("reply_to property not provided")
 )

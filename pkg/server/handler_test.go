@@ -84,7 +84,7 @@ func TestOnMsgReceived(t *testing.T) {
 		fields      fields
 		args        args
 		expectedErr bool
-		mockArgs    map[string]string
+		mockArgs    map[string]string // maps the routing to the controller mock method name which should be called
 	}{
 		{
 			"happy path device exchange without RPC should return no error",
@@ -97,9 +97,8 @@ func TestOnMsgReceived(t *testing.T) {
 				make(chan bool, 1),
 				make(chan network.InMsg, 10),
 				network.InMsg{
-					Exchange:   exchangeDevices,
-					RoutingKey: bindingKeyRegisterDevice,
-					Body:       []byte{1, 2, 3},
+					Exchange: exchangeDevices,
+					Body:     []byte{1, 2, 3},
 					Headers: map[string]interface{}{
 						"Authorization": "test-token",
 					},
@@ -125,9 +124,8 @@ func TestOnMsgReceived(t *testing.T) {
 				make(chan bool, 1),
 				make(chan network.InMsg, 10),
 				network.InMsg{
-					Exchange:   exchangeDevices,
-					RoutingKey: bindingKeyRequestData,
-					Body:       []byte{1, 2, 3},
+					Exchange: exchangeDevices,
+					Body:     []byte{1, 2, 3},
 					Headers: map[string]interface{}{
 						"Authorization":  "test-token",
 						"correlation_id": "test-corrId",
@@ -152,9 +150,8 @@ func TestOnMsgReceived(t *testing.T) {
 				make(chan bool, 1),
 				make(chan network.InMsg, 10),
 				network.InMsg{
-					Exchange:   exchangeDataSent,
-					RoutingKey: "any.key",
-					Body:       []byte{1, 2, 3},
+					Exchange: exchangeDataSent,
+					Body:     []byte{1, 2, 3},
 					Headers: map[string]interface{}{
 						"Authorization": "test-token",
 					},
@@ -170,15 +167,14 @@ func TestOnMsgReceived(t *testing.T) {
 			fields{
 				&mocks.FakeLogger{},
 				&mocks.FakeAmqpReceiver{},
-				&mocks.FakeController{},
+				&mocks.FakeController{Err: errors.New("missing correlation id")},
 			},
 			args{
 				make(chan bool, 1),
 				make(chan network.InMsg, 10),
 				network.InMsg{
-					Exchange:   exchangeDevices,
-					RoutingKey: bindingKeyListDevices,
-					Body:       []byte{1, 2, 3},
+					Exchange: exchangeDevices,
+					Body:     []byte{1, 2, 3},
 					Headers: map[string]interface{}{
 						"Authorization": "test-token",
 						"reply_to":      "test-reply_to",
@@ -186,22 +182,24 @@ func TestOnMsgReceived(t *testing.T) {
 				},
 			},
 			true,
-			nil,
+			map[string]string{
+				bindingKeyAuthDevice:  "AuthDevice",
+				bindingKeyListDevices: "ListDevices",
+			},
 		},
 		{
 			"missing reply_to on device exchange with RPC should return missing reply to",
 			fields{
 				&mocks.FakeLogger{},
 				&mocks.FakeAmqpReceiver{},
-				&mocks.FakeController{},
+				&mocks.FakeController{Err: errors.New("missing reply to")},
 			},
 			args{
 				make(chan bool, 1),
 				make(chan network.InMsg, 10),
 				network.InMsg{
-					Exchange:   exchangeDevices,
-					RoutingKey: bindingKeyListDevices,
-					Body:       []byte{1, 2, 3},
+					Exchange: exchangeDevices,
+					Body:     []byte{1, 2, 3},
 					Headers: map[string]interface{}{
 						"Authorization":  "test-token",
 						"correlation_id": "test-corrId",
@@ -209,14 +207,17 @@ func TestOnMsgReceived(t *testing.T) {
 				},
 			},
 			true,
-			nil,
+			map[string]string{
+				bindingKeyAuthDevice:  "AuthDevice",
+				bindingKeyListDevices: "ListDevices",
+			},
 		},
 		{
 			"empty header should return missing authorization token",
 			fields{
 				&mocks.FakeLogger{},
 				&mocks.FakeAmqpReceiver{},
-				&mocks.FakeController{},
+				&mocks.FakeController{Err: errors.New("missing auth token")},
 			},
 			args{
 				make(chan bool, 1),
@@ -224,7 +225,13 @@ func TestOnMsgReceived(t *testing.T) {
 				network.InMsg{Exchange: exchangeDevices, RoutingKey: bindingKeyRegisterDevice, Body: []byte{1, 2, 3}, Headers: map[string]interface{}{}},
 			},
 			true,
-			nil,
+			map[string]string{
+				bindingKeyRegisterDevice:   "Register",
+				bindingKeyUnregisterDevice: "Unregister",
+				bindingKeyRequestData:      "RequestData",
+				bindingKeyUpdateData:       "UpdateData",
+				bindingKeySchemaSent:       "UpdateSchema",
+			},
 		},
 		{
 			"unexpected exchange should return operation unsuported",
@@ -268,15 +275,21 @@ func TestOnMsgReceived(t *testing.T) {
 			fields{
 				&mocks.FakeLogger{},
 				&mocks.FakeAmqpReceiver{},
-				&mocks.FakeController{},
+				&mocks.FakeController{Err: errors.New("empty header")},
 			},
 			args{
 				make(chan bool, 1),
 				make(chan network.InMsg, 10),
-				network.InMsg{Exchange: exchangeDevices, RoutingKey: bindingKeyRegisterDevice, Body: []byte{1, 2, 3}, Headers: nil},
+				network.InMsg{Exchange: exchangeDevices, Body: []byte{1, 2, 3}, Headers: nil},
 			},
 			true,
-			nil,
+			map[string]string{
+				bindingKeyRegisterDevice:   "Register",
+				bindingKeyUnregisterDevice: "Unregister",
+				bindingKeyRequestData:      "RequestData",
+				bindingKeyUpdateData:       "UpdateData",
+				bindingKeySchemaSent:       "UpdateSchema",
+			},
 		},
 		{
 			"when body is not provided should return an error",
@@ -311,7 +324,7 @@ func TestOnMsgReceived(t *testing.T) {
 			if tt.mockArgs != nil {
 				for key, value := range tt.mockArgs {
 					if len(value) > 0 {
-						tt.fields.thingController.On(value).Once()
+						tt.fields.thingController.On(value).Return(tt.fields.thingController.Err).Once()
 					}
 					tt.args.msg.RoutingKey = key
 					tt.args.msgChan <- tt.args.msg
