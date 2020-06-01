@@ -240,12 +240,6 @@ func TestPubSub(t *testing.T) { // Actually should be RPC too
 				} else {
 					assert.False(t, tt.expectedErr)
 				}
-			case network.DataSent:
-				assert.Equal(t, "123", tmp.ID)
-			case network.DataRequest:
-				assert.Equal(t, "123", tmp.ID)
-			case network.DataUpdate:
-				assert.Equal(t, "123", tmp.ID)
 			case network.DeviceUnregisteredResponse:
 				assert.Equal(t, "123", tmp.ID)
 				if assert.NotNil(t, tmp.Error) {
@@ -264,6 +258,16 @@ func TestPubSub(t *testing.T) { // Actually should be RPC too
 }
 
 func TestDataEvents(t *testing.T) {
+	_, err := registerThing("123", "testThing")
+	if err != nil {
+		assert.FailNow(t, err.Error())
+	}
+	defer func() {
+		err = unregisterThing("123")
+		if err != nil {
+			assert.FailNow(t, err.Error())
+		}
+	}()
 	tests := []struct {
 		name         string
 		exchange     string
@@ -321,11 +325,24 @@ func TestDataEvents(t *testing.T) {
 			network.DataUpdate{},
 			false,
 		},
+		// Can not use data before call schema
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.True(t, true)
+			err := subcribeAndSend(tt.msg, tt.exchange, tt.key, tt.token, &tt.msgResp, tt.respExchange, tt.respKey)
+			if err != nil {
+				assert.FailNow(t, err.Error())
+			}
+
+			switch tmp := tt.msgResp.(type) {
+			case network.DataSent:
+				assert.Equal(t, "123", tmp.ID)
+			case network.DataRequest:
+				assert.Equal(t, "123", tmp.ID)
+			case network.DataUpdate:
+				assert.Equal(t, "123", tmp.ID)
+			}
 		})
 	}
 }
